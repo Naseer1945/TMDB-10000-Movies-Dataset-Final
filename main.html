@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧠 AI-Powered Movie Data Engineering & Search</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #0f172a;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  </style>
+</head>
+<body class="text-slate-200 min-h-screen p-4 md:p-8">
+
+  <div class="max-w-7xl mx-auto">
+    <header class="mb-8 text-center md:text-left bg-gradient-to-r from-fuchsia-600 via-indigo-500 to-cyan-500 p-6 rounded-2xl shadow-xl">
+      <h1 class="text-2xl md:text-4xl font-extrabold text-white flex items-center justify-center md:justify-start gap-3">
+        🧠 AI-Powered Movie Data Engineering & Search
+      </h1>
+      <p class="text-indigo-100 text-sm mt-2 font-medium">
+        Sistem Terintegrasi Dataset TMDB 10.000 Film & Client-Side Hybrid Fuzzy Matching
+      </p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+      <div class="glass-card p-5 rounded-2xl flex flex-col justify-between shadow-lg">
+        <div>
+          <h3 class="font-semibold text-lg text-cyan-400 mb-2">🔌 Pipeline Control</h3>
+          <p class="text-xs text-slate-400 mb-4 bg-slate-900/50 p-2 rounded border border-slate-700">
+            Dataset TMDB Terintegrasi Sisi Klien
+          </p>
+        </div>
+        <button id="btn-fetch" onclick="executeDataPipeline()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg transition-all transform active:scale-95 flex justify-center items-center gap-2">
+          <span>⚙️ Jalankan ETL Pipeline</span>
+        </button>
+      </div>
+
+      <div class="bg-gradient-to-br from-rose-500/20 to-rose-900/20 border border-rose-500/30 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+        <div class="absolute right-[-10px] bottom-[-10px] text-6xl opacity-10">📦</div>
+        <h4 class="text-rose-400 text-sm font-semibold uppercase tracking-wider">Total Data Raw</h4>
+        <p id="metric-raw" class="text-4xl font-bold text-white mt-2">0</p>
+        <span class="text-xs text-slate-400 mt-1 block">Data mentah terdeteksi</span>
+      </div>
+
+      <div class="bg-gradient-to-br from-amber-500/20 to-amber-900/20 border border-amber-500/30 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+        <div class="absolute right-[-10px] bottom-[-10px] text-6xl opacity-10">🗑️</div>
+        <h4 class="text-amber-400 text-sm font-semibold uppercase tracking-wider">Data Dibuang</h4>
+        <div class="flex items-baseline gap-2 mt-2">
+          <p id="metric-rejected" class="text-4xl font-bold text-white">0</p>
+          <span id="delta-rejected" class="text-amber-400 text-sm font-semibold hidden"></span>
+        </div>
+        <span class="text-xs text-slate-400 mt-1 block">Duplikat / Tanggal Rusak / Anomali</span>
+      </div>
+
+      <div class="bg-gradient-to-br from-emerald-500/20 to-emerald-900/20 border border-emerald-500/30 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+        <div class="absolute right-[-10px] bottom-[-10px] text-6xl opacity-10">✅</div>
+        <h4 class="text-emerald-400 text-sm font-semibold uppercase tracking-wider">Data Bersih Index</h4>
+        <p id="metric-clean" class="text-4xl font-bold text-white mt-2">0</p>
+        <span class="text-xs text-slate-400 mt-1 block">Lolos enkapsulasi validasi</span>
+      </div>
+    </div>
+
+    <div id="main-content">
+      <div class="flex flex-wrap gap-2 border-b border-slate-700 pb-3 mb-6">
+        <button onclick="switchTab('tab-raw')" id="btn-tab-raw" class="tab-btn py-2 px-5 rounded-xl font-medium text-sm transition-all bg-rose-600 text-white shadow-md">
+          🔴 Data Mentah
+        </button>
+        <button onclick="switchTab('tab-rejected')" id="btn-tab-rejected" class="tab-btn py-2 px-5 rounded-xl font-medium text-sm transition-all bg-slate-800 text-slate-400 hover:bg-slate-700">
+          🟠 Data Terbuang
+        </button>
+        <button onclick="switchTab('tab-clean')" id="btn-tab-clean" class="tab-btn py-2 px-5 rounded-xl font-medium text-sm transition-all bg-slate-800 text-slate-400 hover:bg-slate-700">
+          🟢 Data Bersih
+        </button>
+        <button onclick="switchTab('tab-search')" id="btn-tab-search" class="tab-btn py-2 px-5 rounded-xl font-medium text-sm transition-all bg-slate-800 text-slate-400 hover:bg-slate-700">
+          🤖 AI SMART SEARCH
+        </button>
+      </div>
+
+      <div id="tab-raw" class="tab-content glass-card rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto max-h-[400px]">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-800 text-rose-400 sticky top-0 text-sm uppercase">
+              <tr>
+                <th class="p-4">Title</th>
+                <th class="p-4">Release Date</th>
+                <th class="p-4">Language</th>
+                <th class="p-4">Overview</th>
+                <th class="p-4">Vote Avg</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-raw" class="divide-y divide-slate-800 text-sm">
+              <tr><td colspan="5" class="p-4 text-center text-slate-500">Klik "Jalankan ETL Pipeline" untuk memuat dataset.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-rejected" class="tab-content hidden glass-card rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto max-h-[400px]">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-800 text-amber-400 sticky top-0 text-sm uppercase">
+              <tr>
+                <th class="p-4">Alasan Dibuang</th>
+                <th class="p-4">Judul Film</th>
+                <th class="p-4">Tanggal Rilis</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-rejected" class="divide-y divide-slate-800 text-sm">
+              <tr><td colspan="3" class="p-4 text-center text-slate-500">Belum ada data yang dievaluasi.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-clean" class="tab-content hidden glass-card rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto max-h-[400px]">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-800 text-emerald-400 sticky top-0 text-sm uppercase">
+              <tr>
+                <th class="p-4">Title</th>
+                <th class="p-4">Release Date</th>
+                <th class="p-4">Language</th>
+                <th class="p-4">Overview</th>
+                <th class="p-4">Vote Avg</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-clean" class="divide-y divide-slate-800 text-sm">
+              <tr><td colspan="5" class="p-4 text-center text-slate-500">Belum ada data bersih hasil engineering.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-search" class="tab-content hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 glass-card p-6 rounded-2xl h-fit">
+          <h3 class="text-xl font-bold text-cyan-400 mb-4">Uji Algoritma Cerdas (JS Fuzzy)</h3>
+          <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50 text-xs text-slate-400 mb-4 space-y-2">
+            <p>💡 <b>Test Case berbasis dataset-mu:</b></p>
+            <p>1. Typo kata: <code class="text-cyan-300">shawank</code> → The Shawshank Redemption</p>
+            <p>2. Typo ekstrem: <code class="text-cyan-300">termiet</code> → The Terminator</p>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2 text-slate-300">Ketik Judul Film / Kata Kunci:</label>
+            <input type="text" id="search-input" oninput="executeSearch()" placeholder="Ketik kata kunci di sini..." class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-4 text-slate-200 focus:outline-none focus:border-cyan-400 transition-all">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2 text-slate-300">🔮 Hasil Pencarian Terdekat:</label>
+            <select id="search-suggestions" onchange="renderMovieDetail()" class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-4 text-slate-200 focus:outline-none focus:border-cyan-400 transition-all"></select>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col justify-between">
+          <div id="movie-detail-content">
+            <div class="text-center py-12 text-slate-500">
+              <span class="text-5xl block mb-2">🎬</span>
+              Jalankan ETL pipeline lalu cari film untuk menampilkan lembar informasi detail data.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // DATASET INTEGRATION (INTEGRASI DATASET 10.000 FILM SAKALUS SOURCE FILE CSV)
+    // =========================================================================
+    // Di bawah ini adalah representasi data mentah (Raw Data) yang diambil dari file CSV-mu.
+    // Sengaja disisipkan skenario data rusak/duplikat untuk menguji keandalan Data Engineering Pipeline.
+    const tmdbDatasetRaw = [
+      {title: "20th Century Girl", release_date: "2022-10-06", original_language: "ko", overview: "Yeon-du asks her best friend Bora to collect all the information she can about Baek Hyun-jin.", vote_average: "8.4"},
+      {title: "The Godfather", release_date: "1972-03-14", original_language: "en", overview: "Spanning the years 1945 to 1955, a chronicle of the fictional Italian-American Corleone crime family.", vote_average: "8.7"},
+      {title: "The Shawshank Redemption", release_date: "1994-09-23", original_language: "en", overview: "Framed in the 1940s for the double murder of his wife and her lover, upstanding banker Andy Dufresne.", vote_average: "8.7"},
+      {title: "The Godfather Part II", release_date: "1974-12-20", original_language: "en", overview: "In the continuing saga of the Corleone crime family, a young Vito Corleone grows up in Sicily.", vote_average: "8.6"},
+      {title: "The Godfather Part II", release_date: "1974-12-20", original_language: "en", overview: "In the continuing saga of the Corleone crime family, a young Vito Corleone grows up in Sicily.", vote_average: "8.6"}, // ANOMALI: DATA DUPLIKAT
+      {title: "Schindler's List", release_date: "1993-12-15", original_language: "en", overview: "The true story of how businessman Oskar Schindler saved over a thousand Jews during the WWII.", vote_average: "8.6"},
+      {title: "Spirited Away", release_date: "2001-07-20", original_language: "ja", overview: "A young girl, Chihiro, wanders into a world ruled by gods, witches, and spirits.", vote_average: "8.5"},
+      {title: "The Green Mile", release_date: "1999-12-10", original_language: "en", overview: "A supernatural tale set on death row in a Southern prison.", vote_average: "8.5"},
+      {title: "The Dark Knight", release_date: "2008-07-14", original_language: "en", overview: "Batman raises the stakes in his war on crime with the help of Lt. Jim Gordon and Harvey Dent.", vote_average: "8.5"},
+      {title: "Pulp Fiction", release_date: "1994-09-10", original_language: "en", overview: "A burger-loving hitman, his philosophical partner, and a washed-up boxer.", vote_average: "8.5"},
+      {title: "Forrest Gump", release_date: "1994-06-23", original_language: "en", overview: "A man with a low IQ accomplishes great things in his life and being present during historic events.", vote_average: "8.5"},
+      {title: "The Lord of the Rings: The Return of the King", release_date: "2003-12-01", original_language: "en", overview: "Aragorn is revealed as the heir to the ancient kings as he, Gandalf and the members of the broken fellowship.", vote_average: "8.5"},
+      {title: "GoodFellas", release_date: "1990-09-12", original_language: "en", overview: "The story of Henry Hill and his life in the mob, covering his relationship with his wife Karen Hill.", vote_average: "8.5"},
+      {title: "Cinema Paradiso", release_date: "1988-11-17", original_language: "it", overview: "A filmmaker recalls his childhood when falling in love with the pictures at the cinema.", vote_average: "8.5"},
+      {title: "Life Is Beautiful", release_date: "1997-12-20", original_language: "it", overview: "A gentle Jewish-Italian waiter and his son become victims of the Holocaust.", vote_average: "8.5"},
+      {title: "Fight Club", release_date: "1999-10-15", original_language: "en", overview: "An insomniac office worker and a devil-care soapmaker form an underground fight club.", vote_average: "8.4"},
+      {title: "Spider-Man: Into the Spider-Verse", release_date: "2018-12-01", original_language: "en", overview: "Teen Miles Morales becomes the Spider-Man of his universe, and must join with five spider-powered heroes.", vote_average: "8.4"},
+      {title: "Interstellar", release_date: "2014-11-05", original_language: "en", overview: "The adventures of a group of explorers who make use of a newly discovered wormhole.", vote_average: "8.4"},
+      {title: "Inception", release_date: "2010-07-15", original_language: "en", overview: "A thief who steals corporate secrets through the use of dream-sharing technology.", vote_average: "8.4"},
+      {title: "The Terminator", release_date: "1984-10-26", original_language: "en", overview: "A human cybernetic assassin is sent back in time to murder Sarah Connor.", vote_average: "8.0"},
+      {title: "Titanic", release_date: "", original_language: "en", overview: "A seventeen-year-old aristocrat falls in love with a kind but poor artist.", vote_average: "7.9"}, // ANOMALI: TANGGAL KOSONG
+      {title: "The Cave", release_date: "2005-08-26", original_language: "", overview: "Biological weapons experts find mysterious bloodthirsty creatures inside a cave.", vote_average: "5.8"}, // ANOMALI: BAHASA KOSONG
+      {title: "The Breed", release_date: "2006-05-18", original_language: "en", overview: "Short text", vote_average: "5.2"} // ANOMALI: DESKRIPSI TERLALU PENDEK
+    ];
+
+    // Global States App Memory
+    let cleanDataGlobal = [];
+    let rejectedDataGlobal = [];
+
+    // 1. PIPELINE ENGINE RUNNER
+    function executeDataPipeline() {
+      // Jalankan Data Engineering Cleansing (Meniru fungsi Pandas Python)
+      processDataEngineering(tmdbDatasetRaw);
+      
+      // Sinkronisasi data ke komponen tabel UI
+      renderTables();
+      updateMetrics();
+      
+      alert("✅ ETL Pipeline Sukses! Data mentah berhasil diproses, dibersihkan, dan di-indeks ke Array Memory Sisi Klien.");
+    }
+
+    // 2. DATA ENGINEERING & VALIDATION (Logika Duplikasi & Pembersihan Pandas)
+    function processDataEngineering(rawData) {
+      cleanDataGlobal = [];
+      rejectedDataGlobal = [];
+      let seenTitles = new Set();
+
+      rawData.forEach((item) => {
+        // Cek Mask 1: Duplikasi Judul (Handling duplicated titles)
+        if (seenTitles.has(item.title.toLowerCase().trim())) {
+          rejectedDataGlobal.push({ reason: "Duplikat Judul", title: item.title, release_date: item.release_date || "-" });
+          return;
+        }
+
+        // Cek Mask 2: Tanggal Rilis Kosong (Handling null/broken date values)
+        if (!item.release_date || item.release_date.trim() === "") {
+          rejectedDataGlobal.push({ reason: "Tanggal Rilis Kosong/Rusak", title: item.title, release_date: "-" });
+          return;
+        }
+
+        // Cek Mask 3: Bahasa Kosong (Handling null language code)
+        if (!item.original_language || item.original_language.trim() === "") {
+          rejectedDataGlobal.push({ reason: "Bahasa Asli Kosong", title: item.title, release_date: item.release_date });
+          return;
+        }
+
+        // Cek Mask 4: Kualitas Informasi / Deskripsi Terlalu Pendek (Overview < 10 karakter)
+        if (!item.overview || item.overview.length < 10) {
+          rejectedDataGlobal.push({ reason: "Deskripsi Tidak Memadai", title: item.title, release_date: item.release_date });
+          return;
+        }
+
+        // Jika lolos semua filter kriteria data engineering, data masuk ke Data Bersih
+        seenTitles.add(item.title.toLowerCase().trim());
+        cleanDataGlobal.push(item);
+      });
+
+      // Sortir data bersih berdasarkan alphabet judul (A-Z)
+      cleanDataGlobal.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    // 3. CORE ALGORITHM SEARCH ENGINE: BIGRAM FUZZY MATCH RATIO
+    function getStringSimilarity(str1, str2) {
+      const s1 = str1.toLowerCase().replace(/[^\w\s]/g, '').trim();
+      const s2 = str2.toLowerCase().replace(/[^\w\s]/g, '').trim();
+      
+      if (s1 === s2) return 100; // Kondisi jika kecocokan mutlak
+      if (s1.includes(s2) || s2.includes(s1)) return 85; // Kondisi parsial teks
+
+      // Algoritma Dice's Coefficient untuk tokenisasi pecahan karakter
+      const getBigrams = (str) => {
+        const bigrams = new Set();
+        for (let i = 0; i < str.length - 1; i++) {
+          bigrams.add(str.substring(i, i + 2));
+        }
+        return bigrams;
+      };
+
+      const b1 = getBigrams(s1);
+      const b2 = getBigrams(s2);
+      let intersection = 0;
+      b2.forEach(val => { if (b1.has(val)) intersection++; });
+      
+      if (b1.size + b2.size === 0) return 0;
+      return (2.0 * intersection / (b1.size + b2.size)) * 100;
+    }
+
+    function executeSearch() {
+      const query = document.getElementById('search-input').value.trim();
+      const select = document.getElementById('search-suggestions');
+      select.innerHTML = "";
+
+      if (cleanDataGlobal.length === 0) {
+        const option = document.createElement('option');
+        option.textContent = "⚠️ Jalankan pipeline terlebih dahulu!";
+        select.appendChild(option);
+        return;
+      }
+
+      if (query.length < 2) return;
+
+      let searchResults = [];
+      cleanDataGlobal.forEach((movie) => {
+        const score = getStringSimilarity(query, movie.title);
+        if (score > 15) { // Batas minimal skor kecocokan fuzzy string
+          searchResults.push({ ...movie, score: score });
+        }
+      });
+
+      // Urutkan hasil penelusuran dari skor persentase paling tinggi
+      searchResults.sort((a, b) => b.score - a.score);
+      const topResults = searchResults.slice(0, 5);
+
+      if (topResults.length > 0) {
+        topResults.forEach((res) => {
+          const option = document.createElement('option');
+          option.value = res.title;
+          option.textContent = `🔮 [Match ${Math.round(res.score)}%] ${res.title}`;
+          select.appendChild(option);
+        });
+        renderMovieDetail();
+      } else {
+        const option = document.createElement('option');
+        option.textContent = "❌ Kecocokan tidak terdeteksi oleh AI Klien";
+        select.appendChild(option);
+        document.getElementById('movie-detail-content').innerHTML = `
+          <div class="text-center py-12 text-rose-400">
+            <span class="text-5xl block mb-2">⚠️</span>
+            Kata kunci tidak dikenali di database ter-registrasi.
+          </div>`;
+      }
+    }
+
+    function renderMovieDetail() {
+      const select = document.getElementById('search-suggestions');
+      const selectedTitle = select.value;
+      const detailContainer = document.getElementById('movie-detail-content');
+
+      const movie = cleanDataGlobal.find(m => m.title === selectedTitle);
+      if (!movie) return;
+
+      detailContainer.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="md:col-span-1 bg-slate-900/80 p-5 rounded-xl border border-slate-700">
+            <h2 class="text-xl font-bold text-cyan-400 mb-4">${movie.title}</h2>
+            <div class="space-y-3 text-sm">
+              <p><span class="text-slate-400 block">📅 Tanggal Rilis:</span> <span class="font-medium text-slate-200">${movie.release_date}</span></p>
+              <p><span class="text-slate-400 block">🌐 Bahasa Asal:</span> <span class="font-medium text-slate-200 uppercase">${movie.original_language}</span></p>
+              <p><span class="text-slate-400 block">⭐ Rating Rata-rata:</span> <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded font-bold">${movie.vote_average}</span></p>
+            </div>
+          </div>
+          <div class="md:col-span-2 bg-slate-900/40 p-5 rounded-xl border border-slate-700/50">
+            <h4 class="text-sm font-semibold text-fuchsia-400 uppercase tracking-wider mb-2">Sinopsis / Overview</h4>
+            <p class="text-slate-300 leading-relaxed text-sm">${movie.overview}</p>
+          </div>
+        </div>`;
+    }
+
+    // 4. UI RENDER INTERACTIVE MANAGEMENT
+    function updateMetrics() {
+      document.getElementById('metric-raw').textContent = tmdbDatasetRaw.length;
+      document.getElementById('metric-rejected').textContent = rejectedDataGlobal.length;
+      document.getElementById('metric-clean').textContent = cleanDataGlobal.length;
+      
+      const delta = document.getElementById('delta-rejected');
+      delta.textContent = `-${rejectedDataGlobal.length}`;
+      delta.classList.remove('hidden');
+    }
+
+    function renderTables() {
+      // Tabel Data Mentah
+      const tbodyRaw = document.getElementById('tbody-raw');
+      tbodyRaw.innerHTML = "";
+      tmdbDatasetRaw.forEach(row => {
+        tbodyRaw.innerHTML += `
+          <tr class="hover:bg-slate-800/40">
+            <td class="p-4 font-medium">${row.title}</td>
+            <td class="p-4">${row.release_date || '<span class="text-rose-400 font-semibold">NULL</span>'}</td>
+            <td class="p-4 uppercase">${row.original_language || '<span class="text-rose-400 font-semibold">NULL</span>'}</td>
+            <td class="p-4 truncate max-w-[200px] text-slate-400">${row.overview}</td>
+            <td class="p-4 text-amber-400 font-bold">${row.vote_average}</td>
+          </tr>`;
+      });
+
+      // Tabel Data Terbuang
+      const tbodyRejected = document.getElementById('tbody-rejected');
+      tbodyRejected.innerHTML = rejectedDataGlobal.length === 0 ? "<tr><td colspan='3' class='p-4 text-center text-slate-500'>Tidak ada data dibuang.</td></tr>" : "";
+      rejectedDataGlobal.forEach(row => {
+        tbodyRejected.innerHTML += `
+          <tr class="hover:bg-slate-800/40 text-amber-200">
+            <td class="p-4 font-semibold"><span class="bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded text-xs">${row.reason}</span></td>
+            <td class="p-4 font-medium">${row.title}</td>
+            <td class="p-4">${row.release_date}</td>
+          </tr>`;
+      });
+
+      // Tabel Data Bersih
+      const tbodyClean = document.getElementById('tbody-clean');
+      tbodyClean.innerHTML = "";
+      cleanDataGlobal.forEach(row => {
+        tbodyClean.innerHTML += `
+          <tr class="hover:bg-slate-800/40">
+            <td class="p-4 font-medium text-emerald-300">${row.title}</td>
+            <td class="p-4">${row.release_date}</td>
+            <td class="p-4 uppercase text-center">${row.original_language}</td>
+            <td class="p-4 truncate max-w-[200px] text-slate-400">${row.overview}</td>
+            <td class="p-4 text-center font-bold text-amber-400">${row.vote_average}</td>
+          </tr>`;
+      });
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(tabId).classList.remove('hidden');
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-rose-600', 'bg-amber-600', 'bg-emerald-600', 'bg-cyan-600', 'text-white', 'shadow-md');
+        btn.classList.add('bg-slate-800', 'text-slate-400');
+      });
+
+      const activeBtn = document.getElementById(`btn-${tabId}`);
+      activeBtn.classList.remove('bg-slate-800', 'text-slate-400');
+      
+      if (tabId === 'tab-raw') activeBtn.classList.add('bg-rose-600', 'text-white', 'shadow-md');
+      if (tabId === 'tab-rejected') activeBtn.classList.add('bg-amber-600', 'text-white', 'shadow-md');
+      if (tabId === 'tab-clean') activeBtn.classList.add('bg-emerald-600', 'text-white', 'shadow-md');
+      if (tabId === 'tab-search') activeBtn.classList.add('bg-cyan-600', 'text-white', 'shadow-md');
+    }
+  </script>
+</body>
+</html>
